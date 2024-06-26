@@ -1,6 +1,5 @@
 function login(username: string): boolean {
-  return true;
+    return true;
 }
 
-
-login("Sourav")
+login("Sourav");
