@@ -1,5 +1,12 @@
 function login(username: string): string {
-    return username;
+    // console.log(username);
+    const user = {
+        name: "Sourav",
+    }; const name = user["name"];
+    return username + name;
 }
 
 login("Sourav");
+
+
+
