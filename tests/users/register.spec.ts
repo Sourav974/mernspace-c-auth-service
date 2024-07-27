@@ -4,6 +4,7 @@ import { DataSource } from "typeorm";
 import { AppDataSource } from "../../src/config/data-source";
 import { User } from "../../src/entity/User";
 import { Roles } from "../../src/constants";
+import { isJwt } from "../utils";
 // import { truncateTables } from "../utils";
 
 describe("POST /auth/register", () => {
@@ -20,6 +21,10 @@ describe("POST /auth/register", () => {
         // await truncateTables(connection);
     });
 
+    afterAll(async () => {
+        await connection.destroy();
+    });
+
     describe("Given all fields", () => {
         it("should return the 201 status code", async () => {
             // AAA
@@ -29,22 +34,24 @@ describe("POST /auth/register", () => {
                 firstName: "Sourav",
                 lastName: "Yadav",
                 email: "sourav@mern.space",
-                password: "secret",
+                password: "passwordSecret",
             };
 
             // Act
+
             const response = await request(app)
                 .post("/auth/register")
                 .send(userData);
 
             // Assert
+
             expect(response.statusCode).toBe(201);
         });
 
         it("should return valid json response", async () => {
             /// AAA
 
-            // Arrange
+            //  Arrange
             const userData = {
                 firstName: "Sourav",
                 lastName: "Yadav",
@@ -60,9 +67,9 @@ describe("POST /auth/register", () => {
 
             // Assert
 
-            expect(
-                (response.headers as Record<string, string>)["content-type"],
-            ).toEqual(expect.stringContaining("json"));
+            expect(response.headers["content-type"]).toEqual(
+                expect.stringContaining("json"),
+            );
         });
 
         it("should persist the user in the database", async () => {
@@ -71,7 +78,7 @@ describe("POST /auth/register", () => {
                 firstName: "Sourav",
                 lastName: "Yadav",
                 email: "sourav@mern.space",
-                password: "secret",
+                password: "passwordSecret",
             };
 
             // Act
@@ -96,7 +103,7 @@ describe("POST /auth/register", () => {
                 firstName: "Sourav",
                 lastName: "Yadav",
                 email: "sourav@mern.space",
-                password: "secret",
+                password: "passwordSecret",
             };
 
             // Act
@@ -130,7 +137,7 @@ describe("POST /auth/register", () => {
                 firstName: "Sourav",
                 lastName: "Yadav",
                 email: "sourav@mern.space",
-                password: "secret",
+                password: "passwordSecret",
             };
 
             // Act
@@ -150,7 +157,7 @@ describe("POST /auth/register", () => {
                 firstName: "Sourav ",
                 lastName: "Yadav",
                 email: "sourav@mern.space",
-                password: "secret",
+                password: "passwordSecret",
             };
 
             // Act
@@ -171,7 +178,7 @@ describe("POST /auth/register", () => {
                 firstName: "Sourav ",
                 lastName: "Yadav",
                 email: "sourav@mern.space",
-                password: "secret",
+                password: "passwordSecret",
             };
 
             const userRepository = connection.getRepository(User);
@@ -188,6 +195,39 @@ describe("POST /auth/register", () => {
             expect(response.statusCode).toBe(400);
             expect(users).toHaveLength(1);
         });
+
+        it("should return the access token and refresh token inside a cookie", async () => {
+            // Arrange
+            const userData = {
+                firstName: "Sourav ",
+                lastName: "Yadav",
+                email: "sourav@mern.space",
+                password: "passwordSecret",
+            };
+
+            // Act
+            const response = await request(app)
+                .post("/auth/register")
+                .send(userData);
+
+            // Assert
+            let accessToken: string = "";
+            let refreshToken: string = "";
+            const cookies = (response.headers["set-cookie"] || []) as string[];
+
+            cookies.forEach((cookie) => {
+                if (cookie.includes("accessToken")) {
+                    accessToken = cookie.split(";")[0].split("=")[1];
+                } else if (cookie.includes("refreshToken")) {
+                    refreshToken = cookie.split(";")[0].split("=")[1];
+                }
+            });
+
+            expect(accessToken.length).toBeGreaterThan(0);
+            expect(refreshToken.length).toBeGreaterThan(0);
+            expect(isJwt(accessToken)).toBeTruthy();
+            expect(isJwt(refreshToken)).toBeTruthy();
+        });
     });
 
     describe("Fields are missing", () => {
@@ -197,7 +237,7 @@ describe("POST /auth/register", () => {
                 firstName: "Sourav ",
                 lastName: "Yadav",
                 email: "",
-                password: "secret",
+                password: "passwordSecret",
             };
 
             // Act
@@ -212,6 +252,70 @@ describe("POST /auth/register", () => {
             const users = await userRepository.find();
             expect(users).toHaveLength(0);
         });
+
+        it("should return 400 status code if firstName is missing", async () => {
+            // Arrange
+            const userData = {
+                firstName: "",
+                lastName: "Yadav",
+                email: "sourav@mern.space",
+                password: "secret",
+            };
+
+            // Act
+            const response = await request(app)
+                .post("/auth/register")
+                .send(userData);
+
+            // Assert
+            expect(response.statusCode).toBe(400);
+            const userRepository = connection.getRepository(User);
+            const users = await userRepository.find();
+
+            expect(users).toHaveLength(0);
+        });
+
+        it("should return 400 status code if lastName is missing", async () => {
+            // Arrange
+            const userData = {
+                firstName: "Sourav",
+                lastName: "",
+                email: "sourav@mern.space",
+                password: "secret",
+            };
+
+            // Act
+            const response = await request(app)
+                .post("/auth/register")
+                .send(userData);
+
+            // Assert
+            expect(response.statusCode).toBe(400);
+            const userRepository = connection.getRepository("User");
+            const users = await userRepository.find();
+            expect(users).toHaveLength(0);
+        });
+
+        it("should return 400 status code if password is missing", async () => {
+            // Arrange
+            const userData = {
+                firstName: "Sourav",
+                lastName: "Yadav",
+                email: "sourav@mern.space",
+                password: "",
+            };
+
+            // Act
+            const response = await request(app)
+                .post("/auth/register")
+                .send(userData);
+
+            // Assert
+            expect(response.statusCode).toBe(400);
+            const userRepository = connection.getRepository("User");
+            const users = await userRepository.find();
+            expect(users).toHaveLength(0);
+        });
     });
 
     describe("Fields are not in proper format", () => {
@@ -221,7 +325,7 @@ describe("POST /auth/register", () => {
                 firstName: "Sourav ",
                 lastName: "Yadav",
                 email: " sourav@mern.space ",
-                password: "secret",
+                password: "passwordSecret",
             };
 
             // Act
@@ -234,6 +338,72 @@ describe("POST /auth/register", () => {
             const user = users[0];
 
             expect(user.email).toBe("sourav@mern.space");
+        });
+
+        it("should return 400 status code if email is not a valid email", async () => {
+            // Arrange
+            const userData = {
+                firstName: "Sourav",
+                lastName: "Yadav",
+                email: "souravmern.space",
+                password: "secret",
+            };
+
+            // Act
+            const response = await request(app)
+                .post("/auth/register")
+                .send(userData);
+
+            // Assert
+            expect(response.statusCode).toBe(400);
+            const userRepository = connection.getRepository(User);
+            const users = await userRepository.find();
+            expect(users).toHaveLength(0);
+        });
+
+        it("should return 400 status code if password length is less than 8 characters", async () => {
+            // Arrange
+            const userData = {
+                firstName: "Sourav",
+                lastName: "Yadav",
+                email: "souravmern.space",
+                password: "passwordSecret",
+            };
+
+            // Act
+            const response = await request(app)
+                .post("/auth/register")
+                .send(userData);
+
+            // Assert
+
+            expect(response.statusCode).toBe(400);
+            const userRepository = connection.getRepository(User);
+            const users = await userRepository.find();
+            expect(users).toHaveLength(0);
+        });
+
+        it("should return an array of error messages if email is missing", async () => {
+            // Arrange
+            const userData = {
+                firstName: "Sourav",
+                lastName: "Yadav",
+                email: "",
+                password: "passwordSecret",
+            };
+
+            // Act
+            const response = await request(app)
+                .post("/auth/register")
+                .send(userData);
+
+            expect(response.body).toHaveProperty("errors");
+            expect(
+                (response.body as Record<string, string>).errors.length,
+            ).toBeGreaterThan(0);
+
+            // const userRepository = connection.getRepository(User)
+            // const user = await userRepository.find()
         });
     });
 });
