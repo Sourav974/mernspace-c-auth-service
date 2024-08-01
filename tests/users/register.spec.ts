@@ -8,7 +8,7 @@ import { isJwt } from "../utils";
 import { RefreshToken } from "../../src/entity/RefreshToken";
 // import { truncateTables } from "../utils";
 
-describe.skip("POST /auth/register", () => {
+describe("POST /auth/register", () => {
     let connection: DataSource;
 
     beforeAll(async () => {

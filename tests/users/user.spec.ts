@@ -83,6 +83,30 @@ describe("GET /auth/self", () => {
             // check if user id matches with registered user
             expect((response.body as Record<string, string>).id).toBe(data.id);
         });
+
+        it("should not return the password field", async () => {
+            // Register User
+            const userRepo = connection.getRepository(User);
+            const data = await userRepo.save({
+                ...userData,
+                role: Roles.CUSTOMER,
+            });
+
+            // generate Token
+            const accessToken = jwks.token({
+                sub: String(data.id),
+                role: data.role,
+            });
+
+            const response = await request(app)
+                .get(endpoint)
+                .set("Cookie", [`accessToken=${accessToken}`])
+                .send();
+
+            expect(response.body as Record<string, string>).not.toHaveProperty(
+                "password",
+            );
+        });
     });
 
     describe("Fields are missing", () => {});
