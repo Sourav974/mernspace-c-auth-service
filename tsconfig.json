@@ -120,7 +120,8 @@
         "tests/**/*.ts",
         ".eslintrc.cjs",
         "jest.config.js",
-        "scripts/generateKeys.mjs"
+        "scripts/generateKeys.mjs",
+        "scripts/convertPemToJwk.mjs"
     ]
 
     // "exclude": ["**/*.spec.ts", "tests"]

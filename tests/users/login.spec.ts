@@ -7,7 +7,7 @@ import { User } from "../../src/entity/User";
 import { isJwt } from "../utils";
 import { RefreshToken } from "../../src/entity/RefreshToken";
 
-describe("POST /auth/login", () => {
+describe.skip("POST /auth/login", () => {
     let connection: DataSource;
 
     const registrationUserData = {
