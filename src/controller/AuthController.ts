@@ -20,6 +20,21 @@ export class AuthController {
         private credentialService: CredentialService,
     ) {}
 
+    // Methods
+    private setCookie(
+        res: Response,
+        name: string,
+        token: string,
+        maxAge: number,
+    ) {
+        return res.cookie(name, token, {
+            domain: "localHost",
+            sameSite: "strict",
+            maxAge,
+            httpOnly: true,
+        });
+    }
+
     async register(
         req: RegisterUserRequest,
         res: Response,
@@ -67,19 +82,14 @@ export class AuthController {
                 id: String(newRefreshToken.id),
             });
 
-            res.cookie("accessToken", accessToken, {
-                domain: "localHost",
-                sameSite: "strict",
-                maxAge: 1000 * 60 * 60,
-                httpOnly: true, // very important
-            });
+            this.setCookie(res, "accessToken", accessToken, 1000 * 60 * 60);
 
-            res.cookie("refreshToken", refreshToken, {
-                domain: "localHost",
-                sameSite: "strict",
-                maxAge: 1000 * 60 * 60 * 24 * 365,
-                httpOnly: true, // very important
-            });
+            this.setCookie(
+                res,
+                "refreshToken",
+                refreshToken,
+                1000 * 60 * 60 * 24 * 365,
+            );
 
             res.status(201).json({
                 id: user.id,
@@ -147,19 +157,14 @@ export class AuthController {
                 id: String(newRefreshToken.id),
             });
 
-            res.cookie("accessToken", accessToken, {
-                domain: "localHost",
-                sameSite: "strict",
-                maxAge: 1000 * 60 * 60, // 1h
-                httpOnly: true, // Very Important
-            });
+            this.setCookie(res, "accessToken", accessToken, 1000 * 60 * 60);
 
-            res.cookie("refreshToken", refreshToken, {
-                domain: "localHost",
-                sameSite: "strict",
-                maxAge: 1000 * 60 * 60 * 24 * 365,
-                httpOnly: true,
-            });
+            this.setCookie(
+                res,
+                "refreshToken",
+                refreshToken,
+                1000 * 60 * 60 * 24 * 365,
+            );
 
             this.logger.info("User has been logged in", { id: user.id });
 
@@ -188,6 +193,8 @@ export class AuthController {
             // Generating access token
             const accessToken = this.tokenService.generateAccessToken(payload);
 
+            this.logger.info("Access token generated");
+
             // Persisting refresh token in the db
 
             const user = await this.userService.findById(Number(req.auth.sub));
@@ -208,25 +215,24 @@ export class AuthController {
             // Delete old refresh token
             await this.tokenService.deleteRefreshToken(Number(req.auth.id));
 
+            this.logger.info("Old refresh token deleted", { id: user.id });
+
             // Generating refresh token
             const refreshToken = this.tokenService.generateRefreshToken({
                 ...payload,
                 id: String(newRefreshToken.id),
             });
 
-            res.cookie("accessToken", accessToken, {
-                domain: "localHost",
-                sameSite: "strict",
-                maxAge: 1000 * 60 * 60, // 1h
-                httpOnly: true,
-            });
+            this.logger.info("New refresh token generated");
 
-            res.cookie("refreshToken", refreshToken, {
-                domain: "localHost",
-                sameSite: "strict",
-                maxAge: 1000 * 60 * 60 * 24 * 365, // 1y
-                httpOnly: true,
-            });
+            this.setCookie(res, "accessToken", accessToken, 1000 * 60 * 60);
+
+            this.setCookie(
+                res,
+                "refreshToken",
+                refreshToken,
+                1000 * 60 * 60 * 24 * 365,
+            );
 
             this.logger.info("User has been logged in", { id: user.id });
 
