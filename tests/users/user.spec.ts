@@ -119,6 +119,23 @@ describe("GET /auth/self", () => {
 
             expect(response.statusCode).toBe(401);
         });
+
+        it("should send new access token when refresh token is provided", async () => {
+            // const userData = {
+            //     email: " sourav@mern.space ",
+            //     password: "passwordSecret",
+            // };
+            // const response = await request(app)
+            //     .post("/auth/login")
+            //     .send(userData);
+            // const cookies = (response.headers["set-cookie"] || []) as string[];
+            // console.log(response.body);
+            // get the refresh token from the cookie
+            // then check that refresh token with the db
+            // verify the signature of that refresh token
+            // then generate the new access token if everything is fine
+            // return the access token in the cookie
+        });
     });
 
     describe("Fields are missing", () => {});

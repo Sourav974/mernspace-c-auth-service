@@ -139,11 +139,12 @@ export class AuthController {
             const accessToken = this.tokenService.generateAccessToken(payload);
 
             // Persist the refreshToken
-            const newRefreshToken = this.tokenService.persistRefreshToken(user);
+            const newRefreshToken =
+                await this.tokenService.persistRefreshToken(user);
 
             const refreshToken = this.tokenService.generateRefreshToken({
                 ...payload,
-                id: String((await newRefreshToken).id),
+                id: String(newRefreshToken.id),
             });
 
             res.cookie("accessToken", accessToken, {
@@ -175,5 +176,64 @@ export class AuthController {
         const user = await this.userService.findById(Number(req.auth.sub));
 
         res.json({ ...user, password: undefined });
+    }
+
+    async refresh(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const payload: JwtPayload = {
+                sub: req.auth.sub,
+                role: req.auth.role,
+            };
+
+            // Generating access token
+            const accessToken = this.tokenService.generateAccessToken(payload);
+
+            // Persisting refresh token in the db
+
+            const user = await this.userService.findById(Number(req.auth.sub));
+
+            if (!user) {
+                const error = createHttpError(
+                    400,
+                    "User with the token could not be found",
+                );
+
+                next(error);
+                return;
+            }
+
+            const newRefreshToken =
+                await this.tokenService.persistRefreshToken(user);
+
+            // Delete old refresh token
+            await this.tokenService.deleteRefreshToken(Number(req.auth.id));
+
+            // Generating refresh token
+            const refreshToken = this.tokenService.generateRefreshToken({
+                ...payload,
+                id: String(newRefreshToken.id),
+            });
+
+            res.cookie("accessToken", accessToken, {
+                domain: "localHost",
+                sameSite: "strict",
+                maxAge: 1000 * 60 * 60, // 1h
+                httpOnly: true,
+            });
+
+            res.cookie("refreshToken", refreshToken, {
+                domain: "localHost",
+                sameSite: "strict",
+                maxAge: 1000 * 60 * 60 * 24 * 365, // 1y
+                httpOnly: true,
+            });
+
+            this.logger.info("User has been logged in", { id: user.id });
+
+            res.json({ id: user.id });
+        } catch (error) {
+            next(error);
+            return;
+        }
     }
 }
